@@ -105,9 +105,8 @@ class FamDeploy:
         cropped_blur_img = blur_image[y_min:y_max+1, x_min:x_max+1]
         cropped_highlight_img = highlight_image[y_min:y_max+1, x_min:x_max+1]
         return {
-            'heatmap': masks[0, 0],
-            'alphaclip': masks[0, 1],
-            'human': human_mask,
+            'soft': masks[0, 0],
+            'hard': human_mask,
             'blur_image': blur_image,
             'highlight_image': highlight_image,
             'cropped_blur_img': cropped_blur_img,
