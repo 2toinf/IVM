@@ -6,6 +6,34 @@ import torch
 from PIL import Image
 import numpy as np
 from torch.nn import functional as F
+import os
+import gdown
+
+def _download(url: str, name: str,root: str):
+    os.makedirs(root, exist_ok=True)
+
+    download_target = os.path.join(root, name)
+    if os.path.exists(download_target) and not os.path.isfile(download_target):
+        raise RuntimeError(f"{download_target} exists and is not a regular file")
+    if os.path.isfile(download_target):
+        return download_target
+    gdown.download(url, download_target, quiet=False)
+    return download_target
+
+def load(ckpt_path, device = "cuda"):
+
+
+    url = "https://drive.google.com/uc?export=download&id=1pyx7jo8kKjNvPZ1kqk00u9Ujla0-YFYT"
+    model_path = _download(url, "sam_vit_b_01ec64.pth", os.path.expanduser(f"~/.cache/SeeWhatYouNeed/Sam"))
+    model = FamDeploy(
+        decoder_ckpt=ckpt_path,
+        backbone_name="sam_backbone_base",
+        language_encoder_path = "google-t5/t5-base",
+        backbone_pretrained_path = model_path,
+        device=device
+    )
+    return model
+
 
 class FamDeploy:
     def __init__(self,
@@ -77,7 +105,7 @@ class FamDeploy:
         cropped_blur_img = blur_image[y_min:y_max+1, x_min:x_max+1]
         cropped_highlight_img = highlight_image[y_min:y_max+1, x_min:x_max+1]
         return {
-            'heatmap': masks[0,0],
+            'heatmap': masks[0, 0],
             'alphaclip': masks[0, 1],
             'human': human_mask,
             'blur_image': blur_image,

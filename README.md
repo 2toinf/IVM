@@ -3,14 +3,50 @@
 
 
 
+## Quick Start
+
+### Install
+
+1. Clone this repository and navigate to DecisionNCE folder
+
+```bash
+git clone https://github.com/2toinf/SeeWhatYouNeedDeploy.git
+cd SeeWhatYouNeedDeploy
+```
+
+2. Install Package
+
+```bash
+pip install -e .
+```
 
 
+### Usage
 
 ```python
-model = FamDeploy(
-    decoder_name="decoder_large",
-    decoder_ckpt="ckpt/robotics/ckpt_95ep.pth",
-    backbone_pretrained_path="/home/roborobo/.cache/torch/hub/checkpoints/sam_vit_b_01ec64.pth",
-    language_encoder_path="/home/roborobo/.cache/huggingface/hub/models--google-t5--t5-base/snapshots/a9723ea7f1b39c1eae772870f3b547bf6ef7e6c1"
+import fam
+from PIL import Image
+model = fam.load(
+    	ckpt_path, // Your Ckpt Here 
+	device = "cuda"
 )
+
+image = Image.open("assets/demo,jpg")
+instruction = "pick up the red cup"
+
+result = model(image, instruction, threshold = 0.5)
+'''
+result content:
+	    'soft': heatmap
+            'hard': segmentation map
+            'blur_image': rbg
+            'highlight_image': rbg
+            'cropped_blur_img': rgb
+            'cropped_highlight_img': rgb
+            'alhpa_image': rgba
+'''
+
+
+
+
 ```
