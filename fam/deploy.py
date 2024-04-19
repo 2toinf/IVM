@@ -1,6 +1,6 @@
 import cv2
-import model
-from model.fam import FilterAnything, T5Encoder
+import fam.model
+from fam.model.fam import FilterAnything, T5Encoder
 from timm import create_model
 import torch
 from PIL import Image
@@ -27,6 +27,7 @@ def load(ckpt_path, device = "cuda"):
     model_path = _download(url, "sam_vit_b_01ec64.pth", os.path.expanduser(f"~/.cache/SeeWhatYouNeed/Sam"))
     model = FamDeploy(
         decoder_ckpt=ckpt_path,
+        decoder_name="decoder_large",
         backbone_name="sam_backbone_base",
         language_encoder_path = "google-t5/t5-base",
         backbone_pretrained_path = model_path,

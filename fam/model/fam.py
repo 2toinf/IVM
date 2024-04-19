@@ -11,10 +11,10 @@ from timm.models.registry import register_model
 from typing import Any, List, Tuple
 from functools import partial
 
-from model.decoder import ConditionedMaskDecoder
-from model.T5_encoder import T5Encoder
-from model.sam_components.image_encoder import ImageEncoderViT
-from model.sam_components.transformer import TwoWayTransformer
+from fam.model.decoder import ConditionedMaskDecoder
+from fam.model.T5_encoder import T5Encoder
+from fam.model.sam_components.image_encoder import ImageEncoderViT
+from fam.model.sam_components.transformer import TwoWayTransformer
 
 
 

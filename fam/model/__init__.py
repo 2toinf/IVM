@@ -1,4 +1,4 @@
-from model.fam import ConditionedMaskDecoder,TwoWayTransformer, FilterAnything, ImageEncoderViT, T5Encoder
+from fam.model.fam import ConditionedMaskDecoder,TwoWayTransformer, FilterAnything, ImageEncoderViT, T5Encoder
 from timm.models.registry import register_model
 from functools import partial
 import torch
