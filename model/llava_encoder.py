@@ -1,4 +1,5 @@
 
+from sys import setdlopenflags
 import torch
 from transformers import LlavaNextProcessor, LlavaNextForConditionalGeneration
 import torch
@@ -35,6 +36,7 @@ class LLaVAEncoder(torch.nn.Module):
 
     def forward(self, text_input, image_input, **kwargs):
         text_input = [f"[INST] <image>\n{t} [/INST]" for t in text_input]
+        image_input = (image_input * 255).int()
         inputs = self.processor(text_input, image_input, return_tensors="pt", padding=True).to("cuda")
         # autoregressively complete prompt
         output = self.model(**inputs, output_hidden_states = True, return_dict = True)
@@ -56,7 +58,7 @@ if __name__ == "__main__":
                 low_cpu_mem_usage=True,
                 attn_implementation="flash_attention_2").to("cuda:0")
     text_input = ["Disribe this image", "is the red cup in the image? disribe its location"]
-    image_input = F.to_tensor(image).unsqueeze(0).repeat(2, 1, 1, 1)
+    image_input = (F.to_tensor(image).unsqueeze(0).repeat(2, 1, 1, 1) * 255).int()
 
     
     prompt = [f"[INST] <image>\n{t} [/INST]" for t in text_input]
@@ -65,6 +67,9 @@ if __name__ == "__main__":
 
     # autoregressively complete prompt
     output = model.generate(**inputs, max_new_tokens=100)
+    print(output.shape)
 
-    print(processor.decode(output[0][0], skip_special_tokens=True))
-    print(processor.decode(output[1][0], skip_special_tokens=True))
+    print(output)
+
+    print(processor.decode(output[0], skip_special_tokens=True))
+    print(processor.decode(output[1], skip_special_tokens=True))
