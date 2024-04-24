@@ -9,8 +9,8 @@ from torch import nn
 from torch.nn import functional as F
 
 from typing import  Tuple, Type
-from model.sam_components.prompt_encoder import PositionEmbeddingRandom
-from model.sam_components.mask_decoder import MLP, LayerNorm2d
+from fam.model.sam_components.prompt_encoder import PositionEmbeddingRandom
+from fam.model.sam_components.mask_decoder import MLP, LayerNorm2d
 class ConditionedMaskDecoder(nn.Module):
     def __init__(
         self,
