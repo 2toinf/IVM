@@ -7,7 +7,7 @@ T5EncoderModel._keys_to_ignore_on_load_unexpected = ["decoder.*"]
 
 class T5Encoder(torch.nn.Module):
     def __init__(self, 
-            model_path = '/mnt/lustre/zhengjinliang/.cache/huggingface/hub/models--google--t5-v1_1-base/snapshots/b5fc947a416ea3cb079532cb3c2bbadeb7f800fc',
+            model_path = 'google/t5-v1_1-base',
             device = "cuda",
             max_length = 64) -> None:
         super().__init__()

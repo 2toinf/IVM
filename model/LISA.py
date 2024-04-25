@@ -37,8 +37,8 @@ def dice_loss(
 
 
 def sigmoid_ce_loss(inputs: torch.Tensor, targets: torch.Tensor):
-    loss = F.binary_cross_entropy_with_logits(inputs.flatten(1, 2), targets.flatten(1, 2), reduction='none').mean(-1)
-    return loss
+    loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
+    return loss.flatten(1, 2).mean(1)
 
 
 class LISAWithDiscriminator(nn.Module):
@@ -131,7 +131,7 @@ class LISAWithDiscriminator(nn.Module):
             mode="bilinear",
             align_corners=False,
         )[:, 0, :, :]
-        prob = torch.where(gt_mask > 0.5, mask_output, 1 - mask_output).detach()
+        prob = torch.where(gt_mask > 0.5, mask_output.sigmoid(), 1 - mask_output.sigmoid()).detach()
 
         loss_weight = self.discriminator(image_embeddings, language_embeddings, prob.unsqueeze(1))
 

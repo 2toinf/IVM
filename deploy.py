@@ -62,15 +62,15 @@ class DeployModel_FAM(nn.Module):
         threshold = 0.8):
         
         ori_size = image.size
-        ori_image = np.asarray(image).astype(np.float32)
+        ori_image = np.asarray(image.resize((1024, 1024))).astype(np.float32)
         images = TF.to_tensor(image.resize((1024, 1024))).unsqueeze(0).cuda().half()
         images_for_sam = (images - self.model.pixel_mean.unsqueeze(0)) / self.model.pixel_std.unsqueeze(0)
         image_embeddings = self.model.image_encoder(images_for_sam)
-        language_embeddings = self.model.prompt_encoder([instruction], images)
+        language_embeddings = self.model.prompt_linear(self.model.prompt_encoder([instruction]))
         masks = self.model.mask_decoder(image_embeddings, language_embeddings)
         masks = torch.sigmoid(F.interpolate(
             masks,
-            (ori_size[1], ori_size[0]),
+            (self.model.image_encoder.image_encoder.img_size, self.model.image_encoder.image_encoder.img_size),
             mode="bilinear",
             align_corners=False,
         )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
