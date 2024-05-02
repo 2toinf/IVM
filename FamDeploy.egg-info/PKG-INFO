@@ -1,3 +1,8 @@
+Metadata-Version: 2.1
+Name: FamDeploy
+Version: 0.0.0
+Author: Jinliang Zheng, etc.
+
 ## Quick Start
 
 ### Install
@@ -18,8 +23,12 @@ pip install -e .
 ### Usage
 
 ```python
-from deploy import load
-model = load(ckpt_path, type="lisa", low_gpu_memory = True)
+import fam
+from PIL import Image
+model = fam.load(
+    	ckpt_path, // Your Ckpt Here 
+	device = "cuda"
+)
 
 image = Image.open("assets/demo,jpg")
 instruction = "pick up the red cup"
@@ -33,7 +42,7 @@ result content:
             'highlight_image': rbg
             'cropped_blur_img': rgb
             'cropped_highlight_img': rgb
-            'alpha_image': rgba
+            'alhpa_image': rgba
 '''
 
 

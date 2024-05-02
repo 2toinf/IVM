@@ -10,11 +10,11 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name='fam',
-    py_modules=["fam"],
+    name='FamDeploy',
+    py_modules=["deploy"],
     version='0.0.0',
     packages=find_packages(),
-    description='DecisionNCE: Embodied Multimodal Representations via Implicit Preference Learning',
+    description='',
     long_description=read('README.md'),
     author='Jinliang Zheng, etc.',
     install_requires=[
@@ -24,8 +24,8 @@ setup(
         'mmengine',
         'tqdm',
         'numpy',
-        'transformers',
+        'transformers>=4.40.0',
         'gdown',
-        'opencv'
+        'opencv-python'
     ]
 )

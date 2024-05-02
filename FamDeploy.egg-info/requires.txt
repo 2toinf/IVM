@@ -1,0 +1,9 @@
+torch
+torchvision
+timm
+mmengine
+tqdm
+numpy
+transformers>=4.40.0
+gdown
+opencv-python
