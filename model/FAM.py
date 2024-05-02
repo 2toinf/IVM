@@ -63,25 +63,30 @@ class FAM(nn.Module):
         """
         super().__init__()
         self.image_encoder = ImageEncoderViT(
-            depth=12,
-            embed_dim=768,
+            depth=32,
+            embed_dim=1280,
             img_size=1024,
             mlp_ratio=4,
             norm_layer=partial(torch.nn.LayerNorm, eps=1e-6),
-            num_heads=12,
+            num_heads=16,
             patch_size=16,
             qkv_bias=True,
             use_rel_pos=True,
-            global_attn_indexes=[2, 5, 8, 11],
+            global_attn_indexes=[7, 15, 23, 31],
             window_size=14,
             out_chans=256,
         )
         ckpt = torch.load(sam_model, map_location="cpu")
-        self.image_encoder.load_state_dict(ckpt, strict=False)
+        backbone_ckpt = {}
+        for key, value in ckpt.items():
+            if 'image_encoder.' in key:
+                backbone_ckpt[key.replace('image_encoder.', '')] = value
+        self.image_encoder.load_state_dict(backbone_ckpt)
         self.image_encoder.requires_grad_(False)
-        self.image_encoder = LoRA_Sam(self.image_encoder, r = 4)
+        # self.image_encoder = LoRA_Sam(self.image_encoder, r = 4)
 
         self.prompt_encoder = T5Encoder()
+        self.prompt_encoder.requires_grad_(False)
         self.prompt_linear = Mlp(768, 768, 256)
         self.mask_decoder = ConditionedMaskDecoder(
             transformer_dim=256,
@@ -117,24 +122,24 @@ class FAM(nn.Module):
         nonexpert_images, # B C H W
         nonexpert_instruction, # [str]
         nonexpert_mask, # B H W
-        eta = 0.01
+        eta = 0.001
     ):
-        images = torch.cat((expert_images, nonexpert_images), 0)
+        images = torch.cat((expert_images, nonexpert_images), 0).to(self.pixel_mean.dtype)
         instruction = expert_instruction + nonexpert_instruction
-        gt_mask = torch.cat((expert_mask, nonexpert_mask), 0)
-        images_for_sam = (images - self.pixel_mean.unsqueeze(0)) / self.pixel_std.unsqueeze(0).detach()
-        image_embeddings = self.image_encoder(images_for_sam)
+        gt_mask = torch.cat((expert_mask, nonexpert_mask), 0).to(self.pixel_mean.dtype)
+        # images_for_sam = ((images - self.pixel_mean.unsqueeze(0)) / self.pixel_std.unsqueeze(0)).detach()
+        image_embeddings = self.image_encoder(images)
         language_embeddings = self.prompt_linear(self.prompt_encoder(instruction))
         masks = self.mask_decoder(image_embeddings, language_embeddings)
         mask_output = F.interpolate(
             masks,
-            (self.image_encoder.image_encoder.img_size, self.image_encoder.image_encoder.img_size),
+            (self.image_encoder.img_size, self.image_encoder.img_size),
             mode="bilinear",
             align_corners=False,
         )[:, 0, :, :]
         prob = torch.where(gt_mask > 0.5, mask_output.sigmoid(), 1 - mask_output.sigmoid()).detach()
 
-        loss_weight = self.discriminator(image_embeddings, language_embeddings, prob.unsqueeze(1))
+        loss_weight = self.discriminator(image_embeddings.detach(), language_embeddings.detach(), prob.unsqueeze(1))
 
         expert_target = torch.cat((torch.ones(len(expert_instruction), 1), torch.zeros(len(nonexpert_instruction), 1)), 0).cuda()
         discriminator_loss = F.binary_cross_entropy_with_logits(loss_weight, expert_target)
@@ -158,45 +163,3 @@ class FAM(nn.Module):
             'nonexpert_loss_weight': nonexpert_loss_weight.detach().mean().item(),
             'expert_loss_weight': expert_loss_weight.detach().mean().item()
         }
-
-
-    def postprocess_masks(
-        self,
-        masks: torch.Tensor,
-        input_size: Tuple[int, ...]
-    ) -> torch.Tensor:
-        """
-        Remove padding and upscale masks to the original image size.
-
-        Arguments:
-          masks (torch.Tensor): Batched masks from the mask_decoder,
-            in BxCxHxW format.
-          input_size (tuple(int, int)): The size of the image input to the
-            model, in (H, W) format. Used to remove padding.
-          original_size (tuple(int, int)): The original size of the image
-            before resizing for input to the model, in (H, W) format.
-
-        Returns:
-          (torch.Tensor): Batched masks in BxCxHxW format, where (H, W)
-            is given by original_size.
-        """
-        masks = F.interpolate(
-            masks,
-            (self.image_encoder.image_encoder.img_size, self.image_encoder.image_encoder.img_size),
-            mode="bilinear",
-            align_corners=False,
-        )
-        masks = masks[..., : input_size[0], : input_size[1]]
-        return masks
-
-    def preprocess(self, x: torch.Tensor) -> torch.Tensor:
-        """Normalize pixel values and pad to a square input."""
-        # Normalize colors
-        x = (x - self.pixel_mean) / self.pixel_std
-
-        # Pad
-        h, w = x.shape[-2:]
-        padh = self.image_encoder.image_encoder.img_size - h
-        padw = self.image_encoder.image_encoder.img_size - w
-        x = F.pad(x, (0, padw, 0, padh))
-        return x

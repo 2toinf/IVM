@@ -1,5 +1,5 @@
 import cv2
-from model.LISA import LISAWithDiscriminator
+from model.LISA_vanilla import LISA
 from model.FAM import FAM
 import torchvision.transforms.functional as TF
 import torch
@@ -21,7 +21,7 @@ def _download(url: str, name: str,root: str):
     gdown.download(url, download_target, quiet=False)
     return download_target
 
-def load(ckpt_path, type = "fam", low_gpu_memory = False):
+def load(ckpt_path, type = "lisa", low_gpu_memory = False):
 
     url = "https://drive.google.com/uc?export=download&id=1OyVci6rAwnb2sJPxhObgK7AvlLYDLLHw"
     model_path = _download(url, "sam_vit_h_4b8939.pth", os.path.expanduser(f"~/.cache/SeeWhatYouNeed/Sam"))
@@ -35,7 +35,7 @@ def load(ckpt_path, type = "fam", low_gpu_memory = False):
         model = DeployModel_FAM(
             ckpt_path = ckpt_path,
             sam_ckpt=model_path
-        ).cuda().half()
+        ).cuda()
     return model
 
 
@@ -51,6 +51,7 @@ class DeployModel_FAM(nn.Module):
             sam_model=sam_ckpt
         )
         ckpt = torch.load(ckpt_path, map_location="cpu")
+        if 'module' in ckpt: ckpt  = ckpt['module']
         print(self.model.load_state_dict(ckpt, strict=False))
 
 
@@ -59,24 +60,26 @@ class DeployModel_FAM(nn.Module):
         image: Image,
         instruction: str,
         blur_kernel_size = 201,
-        threshold = 0.8):
+        threshold = 0.2,
+        dilate_kernel_size = 11):
         
         ori_size = image.size
-        ori_image = np.asarray(image.resize((1024, 1024))).astype(np.float32)
-        images = TF.to_tensor(image.resize((1024, 1024))).unsqueeze(0).cuda().half()
-        images_for_sam = (images - self.model.pixel_mean.unsqueeze(0)) / self.model.pixel_std.unsqueeze(0)
-        image_embeddings = self.model.image_encoder(images_for_sam)
-        language_embeddings = self.model.prompt_linear(self.model.prompt_encoder([instruction]))
-        masks = self.model.mask_decoder(image_embeddings, language_embeddings)
-        masks = torch.sigmoid(F.interpolate(
-            masks,
-            (self.model.image_encoder.image_encoder.img_size, self.model.image_encoder.image_encoder.img_size),
+        ori_image = np.asarray(image).astype(np.float32)
+        resize_img = image.resize((self.model.image_encoder.img_size, self.model.image_encoder.img_size))
+        
+        masks = F.interpolate(torch.sigmoid(masks),
+            (ori_size[1], ori_size[0]),
             mode="bilinear",
             align_corners=False,
-        )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
-        mask_output = np.where(masks > threshold, masks, 0)
+        )[0, 0, :, :].detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
+        
 
-        rgba = np.concatenate((ori_image, masks * 255), axis=-1)
+        mask_output = np.where(masks > threshold, 1, 0).astype(np.uint8)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
+        mask_output = cv2.dilate(mask_output,kernel,iterations=1).astype(np.float32)
+        mask_output = cv2.GaussianBlur(mask_output, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
+
+        rgba = np.concatenate((ori_image, mask_output * 255), axis=-1)
         ori_blurred_image = cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)  
         blur_image = mask_output * ori_image + (1-mask_output) * ori_blurred_image
         highlight_image = ori_image * mask_output 
@@ -105,24 +108,21 @@ class DeployModel_LISA(nn.Module):
     def __init__(self,
             ckpt_path,
             sam_ckpt,
-            offload_imageencoder = False, 
             offload_languageencoder = True
         ):
         super().__init__()
-        self.model = LISAWithDiscriminator(
+        self.model = LISA(
             sam_model=sam_ckpt
         )
         ckpt = torch.load(ckpt_path, map_location="cpu")
+        print(ckpt.keys())
         print(self.model.load_state_dict(ckpt, strict=False))
         self.model = self.model.half()
-        if offload_imageencoder:
-            self.model.image_encoder  = accelerate.cpu_offload(self.model.image_encoder , 'cuda')
-        else:
-            self.model.image_encoder = self.model.image_encoder.cuda()
         if offload_languageencoder:
             self.model.prompt_encoder = accelerate.cpu_offload(self.model.prompt_encoder , 'cuda')
         else:
             self.model.prompt_encoder = self.model.prompt_encoder.cuda()
+        self.model.image_encoder = self.model.image_encoder.cuda()
         self.model.pixel_mean = self.model.pixel_mean.cuda()
         self.model.pixel_std = self.model.pixel_std.cuda()
         self.model.mask_decoder = self.model.mask_decoder.cuda()
@@ -133,28 +133,31 @@ class DeployModel_LISA(nn.Module):
         image: Image,
         instruction: str,
         blur_kernel_size = 201,
-        threshold = 0.8):
+        threshold = 0.5,
+        dilate_kernel_size = 21,
+        fill_color=(255, 255, 255)):
         
         ori_size = image.size
         ori_image = np.asarray(image).astype(np.float32)
-        images = TF.to_tensor(image.resize((1024, 1024))).unsqueeze(0).cuda().half()
-        images_for_sam = (images - self.model.pixel_mean.unsqueeze(0)) / self.model.pixel_std.unsqueeze(0)
-        image_embeddings = self.model.image_encoder(images_for_sam)
-        language_embeddings = self.model.prompt_encoder([instruction], images)
-        masks = self.model.mask_decoder(image_embeddings, language_embeddings)
+        masks = self.model.generate(image.resize((1024, 1024)), instruction)
         masks = torch.sigmoid(F.interpolate(
             masks,
             (ori_size[1], ori_size[0]),
             mode="bilinear",
             align_corners=False,
         )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
-        mask_output = np.where(masks > threshold, masks, 0)
+        mask_output = np.where(masks > threshold, 1, 0).astype(np.uint8)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
+        mask_output = cv2.dilate(mask_output,kernel,iterations=1).astype(np.float32)
+        mask_output = cv2.GaussianBlur(mask_output, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
 
-        rgba = np.concatenate((ori_image, masks * 255), axis=-1)
+        rgba = np.concatenate((ori_image, mask_output * 255), axis=-1)
         ori_blurred_image = cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)  
         blur_image = mask_output * ori_image + (1-mask_output) * ori_blurred_image
-        highlight_image = ori_image * mask_output 
-        
+
+        fill_tensor = torch.tensor(fill_color, dtype=torch.uint8).repeat(image.size[1], image.size[0], 1)
+        highlight_image = ori_image * mask_output + fill_tensor.numpy() * (1 - mask_output)
+
         y_indices, x_indices = np.where(mask_output[:,:,0] > 0)
 
         # 计算裁剪边界
@@ -171,8 +174,10 @@ class DeployModel_LISA(nn.Module):
             'highlight_image': highlight_image,
             'cropped_blur_img': cropped_blur_img,
             'cropped_highlight_img': cropped_highlight_img,
-            'alhpa_image': rgba
+            'alpha_image': rgba
         }
+
+
 
 
 

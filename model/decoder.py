@@ -70,7 +70,7 @@ class ConditionedMaskDecoder(nn.Module):
 
         
         # generate pe
-        image_pe = self.pe_layer(self.image_embedding_size,  torch.float16).unsqueeze(0)
+        image_pe = self.pe_layer(self.image_embedding_size,  image_embeddings.dtype).unsqueeze(0)
 
         # Concatenate output tokens
         output_tokens = self.mask_tokens.weight
