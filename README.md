@@ -19,7 +19,7 @@ pip install -e .
 
 ```python
 from deploy import load
-model = load(ckpt_path, type="lisa", low_gpu_memory = True)
+model = load(ckpt_path, type="lisa", low_gpu_memory = False) # Set `low_gpu_memory=True` if you don't have enough GPU Memory
 
 image = Image.open("assets/demo,jpg")
 instruction = "pick up the red cup"

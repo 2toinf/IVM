@@ -26,6 +26,7 @@ setup(
         'numpy',
         'transformers>=4.40.0',
         'gdown',
-        'opencv-python'
+        'opencv-python',
+        'flash-attn'
     ]
 )
