@@ -2,7 +2,7 @@
 
 ### Install
 
-1. Clone this repository and navigate to DecisionNCE folder
+1. Clone this repository and navigate to SeeWhatYouNeedDeploy folder
 
 ```bash
 git clone https://github.com/2toinf/SeeWhatYouNeedDeploy.git
@@ -12,6 +12,7 @@ cd SeeWhatYouNeedDeploy
 2. Install Package
 
 ```bash
+conda create -n CUNeed
 pip install -e .
 ```
 
