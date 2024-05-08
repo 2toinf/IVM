@@ -2,7 +2,7 @@
 
 ### Install
 
-1. Clone this repository and navigate to DecisionNCE folder
+1. Clone this repository and navigate to SeeWhatYouNeedDeploy folder
 
 ```bash
 git clone https://github.com/2toinf/SeeWhatYouNeedDeploy.git
@@ -12,6 +12,7 @@ cd SeeWhatYouNeedDeploy
 2. Install Package
 
 ```bash
+conda create -n CUNeed
 pip install -e .
 ```
 
@@ -19,9 +20,11 @@ pip install -e .
 
 ```python
 from deploy import load
+from PIL import Image
+
 model = load(ckpt_path, type="lisa", low_gpu_memory = False) # Set `low_gpu_memory=True` if you don't have enough GPU Memory
 
-image = Image.open("assets/demo,jpg")
+image = Image.open("assets/demo.jpg")
 instruction = "pick up the red cup"
 
 result = model(image, instruction, threshold = 0.5)
