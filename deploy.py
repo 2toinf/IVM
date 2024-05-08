@@ -100,7 +100,7 @@ class DeployModel_LISA(nn.Module):
             hard.append(mask_output)
             rgba.append(np.concatenate((ori_image, mask_output * 255), axis=-1))
             blur_image.append(mask_output * ori_image + (1-mask_output) * cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)) 
-            highlight_image.append(ori_image * mask_output + torch.tensor(fill_color, dtype=torch.uint8).repeat(image.size[1], image.size[0], 1).numpy() * (1 - mask_output))
+            highlight_image.append(ori_image * mask_output + torch.tensor(fill_color, dtype=torch.uint8).repeat(ori_size[1], ori_size[0], 1).numpy() * (1 - mask_output))
             cropped_blur_img.append(blur_image[-1][y_min:y_max+1, x_min:x_max+1])
             cropped_highlight_img.append(highlight_image[-1][y_min:y_max+1, x_min:x_max+1])
         return {

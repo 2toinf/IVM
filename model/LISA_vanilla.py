@@ -111,8 +111,7 @@ class LISA(nn.Module):
         return mask_output
     
     def generate_batch(self, images, instruction):
-        images = torch.stack([self.preprocess(img) for img in images], dim = 0)
-        image_embeddings = self.image_encoder(images)
+        image_embeddings = self.image_encoder(torch.stack([self.preprocess(img) for img in images], dim = 0))
         language_embeddings = self.prompt_encoder(instruction, images)
         masks = self.mask_decoder(image_embeddings, language_embeddings)
         mask_output = self.postprocess_masks(masks)
