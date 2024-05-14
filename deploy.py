@@ -118,7 +118,7 @@ class DeployModel_LISA(nn.Module):
         self, 
         image: Image,
         instruction: str,
-        blur_kernel_size = 201,
+        blur_kernel_size = 401,
         threshold = 0.5,
         dilate_kernel_size = 21,
         min_reserved_ratio = 0.1,
