@@ -66,6 +66,7 @@ class DeployModel_LISA(nn.Module):
         blur_kernel_size = 201,
         threshold = 0.5,
         dilate_kernel_size = 21,
+        min_reserved_ratio = 0.2,
         fill_color=(255, 255, 255)
     ):
         ori_sizes = [img.size for img in image]
@@ -74,7 +75,6 @@ class DeployModel_LISA(nn.Module):
 
 
         soft = []
-        hard = []
         blur_image = []
         highlight_image = []
         cropped_blur_img = []
@@ -87,25 +87,24 @@ class DeployModel_LISA(nn.Module):
                 mode="bilinear",
                 align_corners=False,
             )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
-            mask_output = np.where(mask > threshold, 1, 0).astype(np.uint8)
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
-            mask_output = cv2.dilate(mask_output,kernel,iterations=1).astype(np.float32)
-            mask_output = cv2.GaussianBlur(mask_output, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
-            y_indices, x_indices = np.where(mask_output[:,:,0] > 0)
+            mask = cv2.dilate(mask,kernel,iterations=1).astype(np.float32)
+            mask = cv2.GaussianBlur(mask, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
+
+            mask = (mask - mask.min()) / (mask.max() - mask.min())* (1 - min_reserved_ratio)
+            y_indices, x_indices = np.where(mask[:,:,0] > threshold)
             x_min, x_max = x_indices.min(), x_indices.max()
             y_min, y_max = y_indices.min(), y_indices.max()
 
 
             soft.append(mask)
-            hard.append(mask_output)
-            rgba.append(np.concatenate((ori_image, mask_output * 255), axis=-1))
-            blur_image.append(mask_output * ori_image + (1-mask_output) * cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)) 
-            highlight_image.append(ori_image * mask_output + torch.tensor(fill_color, dtype=torch.uint8).repeat(ori_size[1], ori_size[0], 1).numpy() * (1 - mask_output))
+            rgba.append(np.concatenate((ori_image, mask * 255), axis=-1))
+            blur_image.append(mask * ori_image + (1-mask) * cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)) 
+            highlight_image.append(ori_image * (mask + min_reserved_ratio) + torch.tensor(fill_color, dtype=torch.uint8).repeat(ori_size[1], ori_size[0], 1).numpy() * (1 - min_reserved_ratio - mask))
             cropped_blur_img.append(blur_image[-1][y_min:y_max+1, x_min:x_max+1])
             cropped_highlight_img.append(highlight_image[-1][y_min:y_max+1, x_min:x_max+1])
         return {
-            'soft': masks,
-            'hard': mask_output,
+            'soft': soft,
             'blur_image': blur_image,
             'highlight_image': highlight_image,
             'cropped_blur_img': cropped_blur_img,
@@ -122,6 +121,7 @@ class DeployModel_LISA(nn.Module):
         blur_kernel_size = 201,
         threshold = 0.5,
         dilate_kernel_size = 21,
+        min_reserved_ratio = 0.1,
         fill_color=(255, 255, 255)):
         
         ori_size = image.size
@@ -132,31 +132,32 @@ class DeployModel_LISA(nn.Module):
             (ori_size[1], ori_size[0]),
             mode="bilinear",
             align_corners=False,
-        )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
-        mask_output = np.where(masks > threshold, 1, 0).astype(np.uint8)
+        )[0, 0, :, :]).detach().cpu().numpy().astype(np.uint8)[:,:,np.newaxis]
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
-        mask_output = cv2.dilate(mask_output,kernel,iterations=1).astype(np.float32)
-        mask_output = cv2.GaussianBlur(mask_output, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
+        masks = cv2.dilate(masks,kernel,iterations=1).astype(np.float32)
+        masks = cv2.GaussianBlur(masks, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
 
-        rgba = np.concatenate((ori_image, mask_output * 255), axis=-1)
+        masks = (masks - masks.min()) / (masks.max() - masks.min()) * (1 - min_reserved_ratio)
+        rgba = np.concatenate((ori_image, masks * 255), axis=-1)
         ori_blurred_image = cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)  
-        blur_image = mask_output * ori_image + (1-mask_output) * ori_blurred_image
+        blur_image = masks * ori_image + (1-masks) * ori_blurred_image
 
         fill_tensor = torch.tensor(fill_color, dtype=torch.uint8).repeat(image.size[1], image.size[0], 1)
-        highlight_image = ori_image * mask_output + fill_tensor.numpy() * (1 - mask_output)
+        highlight_image = ori_image * (masks + min_reserved_ratio) + fill_tensor.numpy() * (1 - min_reserved_ratio - masks)
+        try:
+            y_indices, x_indices = np.where(masks[:,:,0] > threshold)
+            # 计算裁剪边界
+            x_min, x_max = x_indices.min(), x_indices.max()
+            y_min, y_max = y_indices.min(), y_indices.max()
 
-        y_indices, x_indices = np.where(mask_output[:,:,0] > 0)
-
-        # 计算裁剪边界
-        x_min, x_max = x_indices.min(), x_indices.max()
-        y_min, y_max = y_indices.min(), y_indices.max()
-
-        # 根据边界裁剪图片
-        cropped_blur_img = blur_image[y_min:y_max+1, x_min:x_max+1]
-        cropped_highlight_img = highlight_image[y_min:y_max+1, x_min:x_max+1]
+            # 根据边界裁剪图片
+            cropped_blur_img = blur_image[y_min:y_max+1, x_min:x_max+1]
+            cropped_highlight_img = highlight_image[y_min:y_max+1, x_min:x_max+1]
+        except:
+            cropped_blur_img = blur_image
+            cropped_highlight_img = highlight_image
         return {
             'soft': masks,
-            'hard': mask_output,
             'blur_image': blur_image,
             'highlight_image': highlight_image,
             'cropped_blur_img': cropped_blur_img,
