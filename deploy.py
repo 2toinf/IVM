@@ -91,7 +91,7 @@ class DeployModel_LISA(nn.Module):
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
             mask = cv2.dilate(mask,kernel,iterations=1).astype(np.float32)
             mask = cv2.GaussianBlur(mask, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
-            if mask.max() - mask.min() < range_threshold:
+            if mask.max() - mask.min() > range_threshold:
                 mask = (mask - mask.min()) / (mask.max() - mask.min()) * (1 - min_reserved_ratio)
             else:
                 mask = np.ones_like(mask)
@@ -140,7 +140,7 @@ class DeployModel_LISA(nn.Module):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
         masks = cv2.dilate(masks,kernel,iterations=1).astype(np.float32)
         masks = cv2.GaussianBlur(masks, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
-        if masks.max() - masks.min() < range_threshold:
+        if masks.max() - masks.min() > range_threshold:
             masks = (masks - masks.min()) / (masks.max() - masks.min()) * (1 - min_reserved_ratio)
         else:
             masks = np.ones_like(masks)
