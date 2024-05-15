@@ -64,7 +64,8 @@ class DeployModel_LISA(nn.Module):
         image, # list of PIL.Image
         instruction, # list of instruction
         blur_kernel_size = 201,
-        threshold = 0.5,
+        range_threshold = 0.5,
+        boxes_threshold = 0.5,
         dilate_kernel_size = 21,
         min_reserved_ratio = 0.2,
         fill_color=(255, 255, 255)
@@ -90,9 +91,11 @@ class DeployModel_LISA(nn.Module):
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
             mask = cv2.dilate(mask,kernel,iterations=1).astype(np.float32)
             mask = cv2.GaussianBlur(mask, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
-
-            mask = (mask - mask.min()) / (mask.max() - mask.min())* (1 - min_reserved_ratio)
-            y_indices, x_indices = np.where(mask[:,:,0] > threshold)
+            if mask.max() - mask.min() < range_threshold:
+                mask = (mask - mask.min()) / (mask.max() - mask.min()) * (1 - min_reserved_ratio)
+            else:
+                mask = np.ones_like(mask)
+            y_indices, x_indices = np.where(mask[:,:,0] > boxes_threshold)
             x_min, x_max = x_indices.min(), x_indices.max()
             y_min, y_max = y_indices.min(), y_indices.max()
 
@@ -119,7 +122,8 @@ class DeployModel_LISA(nn.Module):
         image: Image,
         instruction: str,
         blur_kernel_size = 401,
-        threshold = 0.5,
+        crop_threshold = 0.5,
+        range_threshold = 0.5,
         dilate_kernel_size = 21,
         min_reserved_ratio = 0.1,
         fill_color=(255, 255, 255)):
@@ -136,8 +140,10 @@ class DeployModel_LISA(nn.Module):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
         masks = cv2.dilate(masks,kernel,iterations=1).astype(np.float32)
         masks = cv2.GaussianBlur(masks, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
-
-        masks = (masks - masks.min()) / (masks.max() - masks.min()) * (1 - min_reserved_ratio)
+        if masks.max() - masks.min() < range_threshold:
+            masks = (masks - masks.min()) / (masks.max() - masks.min()) * (1 - min_reserved_ratio)
+        else:
+            masks = np.ones_like(masks)
         rgba = np.concatenate((ori_image, masks * 255), axis=-1)
         ori_blurred_image = cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)  
         blur_image = masks * ori_image + (1-masks) * ori_blurred_image
@@ -145,7 +151,7 @@ class DeployModel_LISA(nn.Module):
         fill_tensor = torch.tensor(fill_color, dtype=torch.uint8).repeat(image.size[1], image.size[0], 1)
         highlight_image = ori_image * (masks + min_reserved_ratio) + fill_tensor.numpy() * (1 - min_reserved_ratio - masks)
         try:
-            y_indices, x_indices = np.where(masks[:,:,0] > threshold)
+            y_indices, x_indices = np.where(masks[:,:,0] > crop_threshold)
             # 计算裁剪边界
             x_min, x_max = x_indices.min(), x_indices.max()
             y_min, y_max = y_indices.min(), y_indices.max()
