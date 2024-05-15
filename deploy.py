@@ -66,7 +66,7 @@ class DeployModel_LISA(nn.Module):
         blur_kernel_size = 201,
         range_threshold = 0.5,
         boxes_threshold = 0.5,
-        dilate_kernel_size = 51,
+        dilate_kernel_rate = 0.1,
         min_reserved_ratio = 0.2,
         fill_color=(255, 255, 255)
     ):
@@ -74,7 +74,7 @@ class DeployModel_LISA(nn.Module):
         ori_images = [np.asarray(img).astype(np.float32) for img in image]
         masks = self.model.generate_batch([img.resize((1024, 1024)) for img in image], instruction)
 
-
+        
         soft = []
         blur_image = []
         highlight_image = []
@@ -88,6 +88,7 @@ class DeployModel_LISA(nn.Module):
                 mode="bilinear",
                 align_corners=False,
             )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
+            dilate_kernel_size = int(ori_size[0] * dilate_kernel_rate)
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
             mask = cv2.dilate(mask,kernel,iterations=1).astype(np.float32)
             mask = cv2.GaussianBlur(mask, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
@@ -129,7 +130,7 @@ class DeployModel_LISA(nn.Module):
         blur_kernel_size = 401,
         crop_threshold = 0.5,
         range_threshold = 0.5,
-        dilate_kernel_size = 21,
+        dilate_kernel_rate = 0.1,
         min_reserved_ratio = 0.1,
         fill_color=(255, 255, 255)):
         
@@ -142,6 +143,7 @@ class DeployModel_LISA(nn.Module):
             mode="bilinear",
             align_corners=False,
         )[0, 0, :, :]).detach().cpu().numpy().astype(np.uint8)[:,:,np.newaxis]
+        dilate_kernel_size = int(ori_size[0] * dilate_kernel_rate)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
         masks = cv2.dilate(masks,kernel,iterations=1).astype(np.float32)
         masks = cv2.GaussianBlur(masks, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
