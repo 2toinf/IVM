@@ -66,7 +66,7 @@ class DeployModel_LISA(nn.Module):
         blur_kernel_size = 201,
         range_threshold = 0.5,
         boxes_threshold = 0.5,
-        dilate_kernel_size = 21,
+        dilate_kernel_size = 51,
         min_reserved_ratio = 0.2,
         fill_color=(255, 255, 255)
     ):
@@ -94,18 +94,23 @@ class DeployModel_LISA(nn.Module):
             if mask.max() - mask.min() > range_threshold:
                 mask = (mask - mask.min()) / (mask.max() - mask.min()) * (1 - min_reserved_ratio)
             else:
-                mask = np.ones_like(mask)
-            y_indices, x_indices = np.where(mask[:,:,0] > boxes_threshold)
-            x_min, x_max = x_indices.min(), x_indices.max()
-            y_min, y_max = y_indices.min(), y_indices.max()
-
-
+                mask = np.ones_like(mask) * (1 - min_reserved_ratio)
+            
             soft.append(mask)
             rgba.append(np.concatenate((ori_image, mask * 255), axis=-1))
             blur_image.append(mask * ori_image + (1-mask) * cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)) 
             highlight_image.append(ori_image * (mask + min_reserved_ratio) + torch.tensor(fill_color, dtype=torch.uint8).repeat(ori_size[1], ori_size[0], 1).numpy() * (1 - min_reserved_ratio - mask))
-            cropped_blur_img.append(blur_image[-1][y_min:y_max+1, x_min:x_max+1])
-            cropped_highlight_img.append(highlight_image[-1][y_min:y_max+1, x_min:x_max+1])
+            
+            
+            try:
+                y_indices, x_indices = np.where(mask[:,:,0] > boxes_threshold)
+                x_min, x_max = x_indices.min(), x_indices.max()
+                y_min, y_max = y_indices.min(), y_indices.max()
+                cropped_blur_img.append(blur_image[-1][y_min:y_max+1, x_min:x_max+1])
+                cropped_highlight_img.append(highlight_image[-1][y_min:y_max+1, x_min:x_max+1])
+            except:
+                cropped_blur_img.append(blur_image[-1])
+                cropped_highlight_img.append(highlight_image[-1])
         return {
             'soft': soft,
             'blur_image': blur_image,
@@ -143,7 +148,8 @@ class DeployModel_LISA(nn.Module):
         if masks.max() - masks.min() > range_threshold:
             masks = (masks - masks.min()) / (masks.max() - masks.min()) * (1 - min_reserved_ratio)
         else:
-            masks = np.ones_like(masks)
+            masks = np.ones_like(masks)* (1 - min_reserved_ratio)
+
         rgba = np.concatenate((ori_image, masks * 255), axis=-1)
         ori_blurred_image = cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)  
         blur_image = masks * ori_image + (1-masks) * ori_blurred_image
