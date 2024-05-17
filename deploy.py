@@ -97,6 +97,8 @@ class DeployModel_LISA(nn.Module):
             else:
                 mask = np.ones_like(mask) * (1 - min_reserved_ratio)
             
+            if len(ori_image.shape) < 3:
+                ori_image = ori_image[:,:,np.newaxis].repeat(3,-1)
             soft.append(mask)
             rgba.append(np.concatenate((ori_image, mask * 255), axis=-1))
             blur_image.append(mask * ori_image + (1-mask) * cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)) 
@@ -114,6 +116,7 @@ class DeployModel_LISA(nn.Module):
                 cropped_highlight_img.append(highlight_image[-1])
         return {
             'soft': soft,
+            'bbox': (x_min, y_min, x_max, y_max), 
             'blur_image': blur_image,
             'highlight_image': highlight_image,
             'cropped_blur_img': cropped_blur_img,
@@ -122,62 +125,62 @@ class DeployModel_LISA(nn.Module):
         }
 
 
-    @torch.no_grad()
-    def forward(
-        self, 
-        image: Image,
-        instruction: str,
-        blur_kernel_size = 401,
-        crop_threshold = 0.5,
-        range_threshold = 0.5,
-        dilate_kernel_rate = 0.05,
-        min_reserved_ratio = 0.1,
-        fill_color=(255, 255, 255)):
+    # @torch.no_grad()
+    # def forward(
+    #     self, 
+    #     image: Image,
+    #     instruction: str,
+    #     blur_kernel_size = 401,
+    #     crop_threshold = 0.5,
+    #     range_threshold = 0.5,
+    #     dilate_kernel_rate = 0.05,
+    #     min_reserved_ratio = 0.1,
+    #     fill_color=(255, 255, 255)):
         
-        ori_size = image.size
-        ori_image = np.asarray(image).astype(np.float32)
-        masks = self.model.generate(image.resize((1024, 1024)), instruction)
-        masks = torch.sigmoid(F.interpolate(
-            masks,
-            (ori_size[1], ori_size[0]),
-            mode="bilinear",
-            align_corners=False,
-        )[0, 0, :, :]).detach().cpu().numpy().astype(np.uint8)[:,:,np.newaxis]
-        dilate_kernel_size = int(ori_size[0] * dilate_kernel_rate) * 2 + 1
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
-        masks = cv2.dilate(masks,kernel,iterations=1).astype(np.float32)
-        masks = cv2.GaussianBlur(masks, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
-        if masks.max() - masks.min() > range_threshold:
-            masks = (masks - masks.min()) / (masks.max() - masks.min()) * (1 - min_reserved_ratio)
-        else:
-            masks = np.ones_like(masks)* (1 - min_reserved_ratio)
+    #     ori_size = image.size
+    #     ori_image = np.asarray(image).astype(np.float32)
+    #     masks = self.model.generate(image.resize((1024, 1024)), instruction)
+    #     masks = torch.sigmoid(F.interpolate(
+    #         masks,
+    #         (ori_size[1], ori_size[0]),
+    #         mode="bilinear",
+    #         align_corners=False,
+    #     )[0, 0, :, :]).detach().cpu().numpy().astype(np.uint8)[:,:,np.newaxis]
+    #     dilate_kernel_size = int(ori_size[0] * dilate_kernel_rate) * 2 + 1
+    #     kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
+    #     masks = cv2.dilate(masks,kernel,iterations=1).astype(np.float32)
+    #     masks = cv2.GaussianBlur(masks, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
+    #     if masks.max() - masks.min() > range_threshold:
+    #         masks = (masks - masks.min()) / (masks.max() - masks.min()) * (1 - min_reserved_ratio)
+    #     else:
+    #         masks = np.ones_like(masks)* (1 - min_reserved_ratio)
 
-        rgba = np.concatenate((ori_image, masks * 255), axis=-1)
-        ori_blurred_image = cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)  
-        blur_image = masks * ori_image + (1-masks) * ori_blurred_image
+    #     rgba = np.concatenate((ori_image, masks * 255), axis=-1)
+    #     ori_blurred_image = cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)  
+    #     blur_image = masks * ori_image + (1-masks) * ori_blurred_image
 
-        fill_tensor = torch.tensor(fill_color, dtype=torch.uint8).repeat(image.size[1], image.size[0], 1)
-        highlight_image = ori_image * (masks + min_reserved_ratio) + fill_tensor.numpy() * (1 - min_reserved_ratio - masks)
-        try:
-            y_indices, x_indices = np.where(masks[:,:,0] > crop_threshold)
-            # 计算裁剪边界
-            x_min, x_max = x_indices.min(), x_indices.max()
-            y_min, y_max = y_indices.min(), y_indices.max()
+    #     fill_tensor = torch.tensor(fill_color, dtype=torch.uint8).repeat(image.size[1], image.size[0], 1)
+    #     highlight_image = ori_image * (masks + min_reserved_ratio) + fill_tensor.numpy() * (1 - min_reserved_ratio - masks)
+    #     try:
+    #         y_indices, x_indices = np.where(masks[:,:,0] > crop_threshold)
+    #         # 计算裁剪边界
+    #         x_min, x_max = x_indices.min(), x_indices.max()
+    #         y_min, y_max = y_indices.min(), y_indices.max()
 
-            # 根据边界裁剪图片
-            cropped_blur_img = blur_image[y_min:y_max+1, x_min:x_max+1]
-            cropped_highlight_img = highlight_image[y_min:y_max+1, x_min:x_max+1]
-        except:
-            cropped_blur_img = blur_image
-            cropped_highlight_img = highlight_image
-        return {
-            'soft': masks,
-            'blur_image': blur_image,
-            'highlight_image': highlight_image,
-            'cropped_blur_img': cropped_blur_img,
-            'cropped_highlight_img': cropped_highlight_img,
-            'alpha_image': rgba
-        }
+    #         # 根据边界裁剪图片
+    #         cropped_blur_img = blur_image[y_min:y_max+1, x_min:x_max+1]
+    #         cropped_highlight_img = highlight_image[y_min:y_max+1, x_min:x_max+1]
+    #     except:
+    #         cropped_blur_img = blur_image
+    #         cropped_highlight_img = highlight_image
+    #     return {
+    #         'soft': masks,
+    #         'blur_image': blur_image,
+    #         'highlight_image': highlight_image,
+    #         'cropped_blur_img': cropped_blur_img,
+    #         'cropped_highlight_img': cropped_highlight_img,
+    #         'alpha_image': rgba
+    #     }
 
 
 
