@@ -17,24 +17,24 @@ We introduce Instruction-guided Visual Masking (IVM), a new versatile visual gro
 
 ### Install
 
-1. Clone this repository and navigate to SeeWhatYouNeedDeploy folder
+1. Clone this repository and navigate to IVM folder
 
 ```bash
-git clone https://github.com/2toinf/SeeWhatYouNeedDeploy.git
-cd SeeWhatYouNeedDeploy
+git clone https://github.com/2toinf/IVM.git
+cd IVM
 ```
 
 2. Install Package
 
 ```bash
-conda create -n CUNeed
+conda create -n IVM
 pip install -e .
 ```
 
 ### Usage
 
 ```python
-from deploy import load
+from IVM import load
 from PIL import Image
 
 model = load(ckpt_path, type="lisa", low_gpu_memory = False) # Set `low_gpu_memory=True` if you don't have enough GPU Memory
