@@ -24,7 +24,7 @@ def _download(url: str, name: str,root: str):
 def load(ckpt_path, low_gpu_memory = False):
 
     url = "https://drive.google.com/uc?export=download&id=1OyVci6rAwnb2sJPxhObgK7AvlLYDLLHw"
-    model_path = _download(url, "sam_vit_h_4b8939.pth", os.path.expanduser(f"~/.cache/SeeWhatYouNeed/Sam"))
+    model_path = _download(url, "sam_vit_h_4b8939.pth", os.path.expanduser(f"~/.cache/IVM/Sam"))
     model = DeployModel_IVM(
         ckpt_path = ckpt_path,
         sam_ckpt=model_path,
