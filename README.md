@@ -1,6 +1,6 @@
 # Instruction-Guided Visual Masking
 
-[[paper]](https://arxiv.org/abs/2405.19783)
+[[paper]](https://arxiv.org/abs/2405.19783) [[project page]](https://2toinf.github.io/IVM/)
 
 ## Introduction
 
