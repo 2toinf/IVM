@@ -91,3 +91,6 @@ Robot Infrastructure: [https://github.com/rail-berkeley/bridge_data_robot](https
 ## Dataset
 
 *Coming Soon*
+
+## Acknowledgement
+This work is built upon the [LLaVA](https://github.com/haotian-liu/LLaVA) and [SAM](https://github.com/facebookresearch/segment-anything). And we borrow ideas from [LISA](https://github.com/dvlab-research/LISA)
