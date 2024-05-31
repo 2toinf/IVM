@@ -9,20 +9,16 @@ We introduce Instruction-guided Visual Masking (IVM), a new versatile visual gro
 ![1716817940241](image/README/1716817940241.png)
 
 
-<center>
-    <img src="./image/gif/duck_greenplate2.gif" width="157"/>
-    <img src="./image/gif/redcup_redplate1.gif" width="157"/>
-    <img src="./image/gif/redcup_redplate3.gif" width="157"/>
-    <img src="./image/gif/redcup_silverpan1.gif" width="157"/>
-    <img src="./image/gif/redcup_silverpan5.gif" width="157"/>
-    <div> &nbsp Duck on green plate  &nbsp &nbsp &nbsp&nbsp&nbsp
-    Red cup on red plate &nbsp &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
-    Red cup on red plate &nbsp &nbsp &nbsp&nbsp
-    Red cup on silver pan &nbsp &nbsp &nbsp&nbsp&nbsp
-    Red cup on silver pan </div>  
-</center>
-
-
+<p align="center">
+    <img src="./image/gif/duck_greenplate2.gif" width="18%"/>
+    <img src="./image/gif/redcup_redplate1.gif" width="18%"/>
+    <img src="./image/gif/redcup_redplate3.gif" width="18%"/>
+    <img src="./image/gif/redcup_silverpan1.gif" width="18%"/>
+    <img src="./image/gif/redcup_silverpan5.gif" width="18%"/>
+</p>
+<p align="center">
+ <em> Duck on green plate</em> &nbsp; | &nbsp; <em>Red cup on red plate</em> &nbsp; | &nbsp; <em>Red cup on red plate</em> &nbsp; | &nbsp; <em>Red cup on silver pan </em> &nbsp; | &nbsp; <em>Red cup on silver pan </em>
+</p>
 
 ## Content
 
