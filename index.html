@@ -167,7 +167,7 @@
       <!-- <video id="matting-video" autoplay muted controls playsinline width="100%" >
         <source src="./assets/web/teaser.mp4" type="video/mp4">
       </video> -->
-      <img src="./image/README/1716817940241.png" alt="Image" style="width: 50%;">
+      <img src="./image/README/1716817940241.png" alt="Image" style="width: 100%;">
     </div>
   </div>
 </section>
@@ -205,24 +205,7 @@
 <section class="section">
     <div class="container">
       <div class="columns is-centered has-text-centered">
-        <div class="column">
-            <h2 style="text-align:left" class="title is-3">Results on VQA-type benchmarks</h2>
-
-            <h3 style="text-align:left" class="title is-4">V* bench and visualization results</h3>
-                <div class="content has-text-justified">
-                    <p>
-                        We evaluate IVM-enhanced GPT4-V on
-                        V*bench, a recently proposed challenging VQA-type benchmark characterized by images with
-                        abundant redundancies. Results are presented in Table 1. The accuracy of the vanilla GPT4-V is
-                        mediocre (55.0%). Our IVM model, however, can significantly improve the performance (+26.2%). 
-                        Except for the reported score, we provide more visualization results.
-                </p>
-                </div>
-                <img src="./image/vqa_result.png" alt="Image" style="width: 30%;">
-                <img src="./image/Goodcase.png" alt="Image" style="width: 50%;">
-            
-          
-          </div>
+        
         <!-- <div class="column is-full-width has-text-centered"> -->
         <div class="column is-four-fifths">
             <h1 class="title is-2">Downstream Control Tasks Results</h1>
@@ -241,44 +224,44 @@
             <img src="./image/robot_score.jpg" alt="algebraic reasoning" class="center">
             <p><b><i>Figure 1:</i></b> Real robot LCBC experimental results. Success rate is averaged over 10 episodes and 3 seeds.</p>
           </div>
+          <div class="column">
+            <h3 style="text-align:left" class="title is-4">Red cup on red plate</h3>
+            <div class="content has-text-justified">
+            </div>
+              <video id="dollyzoom" autoplay controls muted loop playsinline width="48%" height="100%">
+                <source src="./image/video/redcup_redplate1.mp4"
+                        type="video/mp4">
+              </video>
+              <video id="dollyzoom" autoplay controls muted loop playsinline width="48%" height="100%">
+                <source src="./image/video/redcup_redplate3.mp4"
+                        type="video/mp4">
+              </video>
 
+            </div>
           <div class="column">
             <h3 style="text-align:left" class="title is-4">Duck on green plate</h3>
             <div class="content has-text-justified">
             </div>
-              <video id="dollyzoom" autoplay controls muted loop playsinline width="40%" height="100%">
+              <video id="dollyzoom" autoplay controls muted loop playsinline width="48%" height="100%">
                 <source src="./image/video/duck_greenplate1.mp4"
                         type="video/mp4">
               </video>
-              <video id="dollyzoom" autoplay controls muted loop playsinline width="40%" height="100%">
-                <source src="./image/video/duck_greenplate1.mp4"
+              <video id="dollyzoom" autoplay controls muted loop playsinline width="48%" height="100%">
+                <source src="./image/video/duck_greenplate2.mp4"
                         type="video/mp4">
               </video>
 
             </div>
-            <div class="column">
-                <h3 style="text-align:left" class="title is-4">Red cup on red plate</h3>
-                <div class="content has-text-justified">
-                </div>
-                  <video id="dollyzoom" autoplay controls muted loop playsinline width="40%" height="100%">
-                    <source src="./image/video/redcup_redplate1.mp4"
-                            type="video/mp4">
-                  </video>
-                  <video id="dollyzoom" autoplay controls muted loop playsinline width="40%" height="100%">
-                    <source src="./image/video/redcup_redplate3.mp4"
-                            type="video/mp4">
-                  </video>
-    
-                </div>
+           
                 <div class="column">
                     <h3 style="text-align:left" class="title is-4">Red cup on sivler plate</h3>
                     <div class="content has-text-justified">
                     </div>
-                      <video id="dollyzoom" autoplay controls muted loop playsinline width="40%" height="100%">
+                      <video id="dollyzoom" autoplay controls muted loop playsinline width="48%" height="100%">
                         <source src="./image/video/redcup_silverpan1.mp4"
                                 type="video/mp4">
                       </video>
-                      <video id="dollyzoom" autoplay controls muted loop playsinline width="40%" height="100%">
+                      <video id="dollyzoom" autoplay controls muted loop playsinline width="48%" height="100%">
                         <source src="./image/video/redcup_silverpan5.mp4"
                                 type="video/mp4">
                       </video>
@@ -288,11 +271,11 @@
                 <h3 style="text-align:left" class="title is-4">Duck in pot</h3>
                 <div class="content has-text-justified">
                 </div>
-                  <video id="dollyzoom" autoplay controls muted loop playsinline width="40%" height="100%">
+                  <video id="dollyzoom" autoplay controls muted loop playsinline width="48%" height="100%">
                     <source src="./image/video/duck_pot1.mp4"
                             type="video/mp4">
                   </video>
-                  <video id="dollyzoom" autoplay controls muted loop playsinline width="40%" height="100%">
+                  <video id="dollyzoom" autoplay controls muted loop playsinline width="48%" height="100%">
                     <source src="./image/video/duck_pot2.mp4"
                             type="video/mp4">
                   </video>
@@ -308,6 +291,25 @@
                 </div>
         </div>
         </div>
+      </div>
+
+      <div class="column">
+        <h2 style="text-align:left" class="title is-3">Results on VQA-type benchmarks</h2>
+
+        <h3 style="text-align:left" class="title is-4">V* bench and visualization results</h3>
+            <div class="content has-text-justified">
+                <p>
+                    We evaluate IVM-enhanced GPT4-V on
+                    V*bench, a recently proposed challenging VQA-type benchmark characterized by images with
+                    abundant redundancies. Results are presented in Table 1. The accuracy of the vanilla GPT4-V is
+                    mediocre (55.0%). Our IVM model, however, can significantly improve the performance (+26.2%). 
+                    Except for the reported score, we provide more visualization results.
+            </p>
+            </div>
+            <img src="./image/vqa_result.png" alt="Image" style="width: 35%;">
+            <img src="./image/Goodcase.png" alt="Image" style="width: 60%;">
+        
+      
       </div>
 </section>    
 
