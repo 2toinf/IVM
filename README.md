@@ -8,7 +8,21 @@ We introduce Instruction-guided Visual Masking (IVM), a new versatile visual gro
 
 ![1716817940241](image/README/1716817940241.png)
 
-![1717149138996](image/README/1717149138996.png)
+
+<center>
+    <img src="./image/gif/duck_greenplate2.gif" width="157"/>
+    <img src="./image/gif/redcup_redplate1.gif" width="157"/>
+    <img src="./image/gif/redcup_redplate3.gif" width="157"/>
+    <img src="./image/gif/redcup_silverpan1.gif" width="157"/>
+    <img src="./image/gif/redcup_silverpan5.gif" width="157"/>
+    <div> &nbsp Duck on green plate  &nbsp &nbsp &nbsp&nbsp&nbsp
+    Red cup on red plate &nbsp &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+    Red cup on red plate &nbsp &nbsp &nbsp&nbsp
+    Red cup on silver pan &nbsp &nbsp &nbsp&nbsp&nbsp
+    Red cup on silver pan </div>  
+</center>
+
+
 
 ## Content
 
