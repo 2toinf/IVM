@@ -8,6 +8,8 @@ We introduce Instruction-guided Visual Masking (IVM), a new versatile visual gro
 
 ![1716817940241](image/README/1716817940241.png)
 
+![1717149138996](image/README/1717149138996.png)
+
 ## Content
 
 * [Quick Start](#quick-start)
