@@ -8,7 +8,6 @@ We introduce Instruction-guided Visual Masking (IVM), a new versatile visual gro
 
 ![1716817940241](image/README/1716817940241.png)
 
-
 <p align="center">
     <img src="./image/gif/duck_greenplate2.gif" width="19.5%"/>
     <img src="./image/gif/redcup_redplate1.gif" width="19.5%"/>
@@ -93,4 +92,20 @@ Robot Infrastructure: [https://github.com/rail-berkeley/bridge_data_robot](https
 *Coming Soon*
 
 ## Acknowledgement
+
 This work is built upon the [LLaVA](https://github.com/haotian-liu/LLaVA) and [SAM](https://github.com/facebookresearch/segment-anything). And we borrow ideas from [LISA](https://github.com/dvlab-research/LISA)
+
+
+## Citation
+
+```
+@misc{zheng2024instructionguided,
+            title={Instruction-Guided Visual Masking}, 
+            author={Jinliang Zheng and Jianxiong Li and Sijie Cheng and Yinan Zheng and Jiaming Li and Jihao Liu and Yu Liu and Jingjing Liu and Xianyuan Zhan},
+            year={2024},
+            eprint={2405.19783},
+            archivePrefix={arXiv},
+            primaryClass={cs.CV}
+        }
+  
+```
