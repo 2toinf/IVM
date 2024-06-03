@@ -41,7 +41,7 @@ class DeployModel_IVM(nn.Module):
             offload_languageencoder = True
         ):
         super().__init__()
-        self.model = LISA(
+        self.model = IVM(
             sam_model=sam_ckpt
         )
         ckpt = torch.load(ckpt_path, map_location="cpu")
@@ -130,7 +130,7 @@ class DeployModel_IVM(nn.Module):
         image: Image,
         instruction: str,
         blur_kernel_size = 401,
-        crop_threshold = 0.5,
+        boxes_threshold = 0.5,
         range_threshold = 0.5,
         dilate_kernel_rate = 0.05,
         min_reserved_ratio = 0.1,
