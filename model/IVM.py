@@ -44,7 +44,7 @@ class IVM(nn.Module):
 
     def __init__(
         self,
-        sam_model = "/mnt/lustre/zhengjinliang/.cache/torch/hub/checkpoints/sam_vit_h_4b8939.pth",
+        sam_model = "sam_vit_h_4b8939.pth",
         pixel_mean: List[float] = [0.485, 0.456, 0.406] ,#[123.675, 116.28, 103.53],
         pixel_std: List[float] = [0.229, 0.224, 0.225], #[58.395, 57.12, 57.375],
     ) -> None:
