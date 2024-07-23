@@ -2,6 +2,8 @@
 
 [[paper]](https://arxiv.org/abs/2405.19783) [[project page]](https://2toinf.github.io/IVM/)
 
+### 🔥 IVM has been selected as outstanding paper at MFM-EAI workshop @ICML2024
+
 ## Introduction
 
 We introduce Instruction-guided Visual Masking (IVM), a new versatile visual grounding model that is compatible with diverse multimodal models, such as LMM and robot model. By constructing visual masks for instruction-irrelevant regions, IVM-enhanced multimodal models can effectively focus on task-relevant image regions to better align with complex instructions. Specifically, we design a visual masking data generation pipeline and create an IVM-Mix-1M dataset with 1 million image-instruction pairs. We further introduce a new learning technique, Discriminator Weighted Supervised Learning (DWSL) for preferential IVM training that prioritizes high-quality data samples. Experimental results on generic multimodal tasks such as VQA and embodied robotic control demonstrate the versatility of IVM, which as a plug-and-play tool, significantly boosts the performance of diverse multimodal models.
@@ -94,7 +96,6 @@ Robot Infrastructure: [https://github.com/rail-berkeley/bridge_data_robot](https
 ## Acknowledgement
 
 This work is built upon the [LLaVA](https://github.com/haotian-liu/LLaVA) and [SAM](https://github.com/facebookresearch/segment-anything). And we borrow ideas from [LISA](https://github.com/dvlab-research/LISA)
-
 
 ## Citation
 
