@@ -9,7 +9,8 @@ import os
 import gdown
 import accelerate
 import torch.nn as nn
-from typing import Type, Tuple
+from typing import Type, Tuple, List
+
 def _download(url: str, name: str,root: str):
     os.makedirs(root, exist_ok=True)
 
@@ -31,7 +32,6 @@ def load(ckpt_path, low_gpu_memory = False):
         offload_languageencoder=low_gpu_memory
     )
     return model
-
 
 
 class DeployModel_IVM(nn.Module):
@@ -61,7 +61,7 @@ class DeployModel_IVM(nn.Module):
     def forward_batch(
         self, 
         image, # list of PIL.Image
-        instruction, # list of instruction
+        instruction: List[str], # list of instruction
         blur_kernel_size = 201,
         range_threshold = 0.5,
         boxes_threshold = 0.5,
@@ -73,7 +73,6 @@ class DeployModel_IVM(nn.Module):
         ori_images = [np.asarray(img).astype(np.float32) for img in image]
         masks = self.model.generate_batch([img.resize((1024, 1024)) for img in image], instruction)
 
-        
         soft = []
         blur_image = []
         highlight_image = []
@@ -122,65 +121,4 @@ class DeployModel_IVM(nn.Module):
             'cropped_highlight_img': cropped_highlight_img,
             'rgba_image': rgba
         }
-
-
-    @torch.no_grad()
-    def forward(
-        self, 
-        image: Image,
-        instruction: str,
-        blur_kernel_size = 401,
-        boxes_threshold = 0.5,
-        range_threshold = 0.5,
-        dilate_kernel_rate = 0.05,
-        min_reserved_ratio = 0.1,
-        fill_color=(255, 255, 255)):
-        
-        ori_size = image.size
-        ori_image = np.asarray(image).astype(np.float32)
-        mask = self.model.generate([image.resize((1024, 1024))], [instruction])
-        mask = torch.sigmoid(F.interpolate(
-            mask.unsqueeze(0),
-            (ori_size[1], ori_size[0]),
-            mode="bilinear",
-            align_corners=False,
-        )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
-        dilate_kernel_size = int(ori_size[0] * dilate_kernel_rate) * 2 + 1
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
-        mask = cv2.dilate(mask,kernel,iterations=1).astype(np.float32)
-        mask = cv2.GaussianBlur(mask, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
-        if mask.max() - mask.min() > range_threshold:
-            mask = (mask - mask.min()) / (mask.max() - mask.min()) * (1 - min_reserved_ratio)
-        else:
-            mask = np.ones_like(mask) * (1 - min_reserved_ratio)
-            
-        if len(ori_image.shape) < 3:
-            ori_image = ori_image[:,:,np.newaxis].repeat(3,-1)
-
-        soft = mask
-        rgba = np.concatenate((ori_image, mask * 255), axis=-1)
-        blur_image = mask * ori_image + (1-mask) * cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)
-        highlight_image = ori_image * (mask + min_reserved_ratio) + torch.tensor(fill_color, dtype=torch.uint8).repeat(ori_size[1], ori_size[0], 1).numpy() * (1 - min_reserved_ratio - mask)
-        
-        
-        try:
-            y_indices, x_indices = np.where(mask[:,:,0] > boxes_threshold)
-            x_min, x_max = x_indices.min(), x_indices.max()
-            y_min, y_max = y_indices.min(), y_indices.max()
-            cropped_blur_img = blur_image[-1][y_min:y_max+1, x_min:x_max+1]
-            cropped_highlight_img = highlight_image[-1][y_min:y_max+1, x_min:x_max+1]
-        except:
-            cropped_blur_img = blur_image[-1]
-            cropped_highlight_img = highlight_image[-1]
-        return {
-            'soft': soft,
-            'bbox': (x_min, y_min, x_max, y_max), 
-            'blur_image': blur_image,
-            'highlight_image': highlight_image,
-            'cropped_blur_img': cropped_blur_img,
-            'cropped_highlight_img': cropped_highlight_img,
-            'rgba_image': rgba
-        }
-
-
 

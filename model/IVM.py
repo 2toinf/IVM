@@ -8,7 +8,7 @@
 from syslog import LOG_SYSLOG
 from PIL import Image
 import torch
-from torch import nn
+from torch import masked_scatter, nn
 from torch.nn import functional as F
 from torchvision.transforms import functional as TF
 from typing import Any, List, Tuple
@@ -20,6 +20,8 @@ from model.llava_encoder import LLaVAEncoder
 from model.sam_components.image_encoder import ImageEncoderViT
 from model.sam_components.transformer import TwoWayTransformer
 import numpy as np
+
+
 def dice_loss(
 	inputs: torch.Tensor,
 	targets: torch.Tensor,
@@ -44,7 +46,7 @@ class IVM(nn.Module):
 
     def __init__(
         self,
-        sam_model = "sam_vit_h_4b8939.pth",
+        sam_model,
         pixel_mean: List[float] = [0.485, 0.456, 0.406] ,#[123.675, 116.28, 103.53],
         pixel_std: List[float] = [0.229, 0.224, 0.225], #[58.395, 57.12, 57.375],
     ) -> None:
@@ -98,42 +100,66 @@ class IVM(nn.Module):
         self.register_buffer("pixel_mean", torch.Tensor(pixel_mean).view(-1, 1, 1), False)
         self.register_buffer("pixel_std", torch.Tensor(pixel_std).view(-1, 1, 1), False)
 
+
     @property
     def device(self) -> Any:
         return self.pixel_mean.device
 
-
-    def generate(self, images, instruction):
-        image_embeddings = self.image_encoder(self.preprocess(images).unsqueeze(0))
-        language_embeddings = self.prompt_encoder([instruction], [images])
-        masks = self.mask_decoder(image_embeddings, language_embeddings)
-        mask_output = self.postprocess_masks(masks)
-        return mask_output
-    
-    def generate_batch(self, images, instruction):
-        image_embeddings = self.image_encoder(torch.stack([self.preprocess(img) for img in images], dim = 0))
+    def get_ratio(self, images, instruction, boxes_threshold = 0.1):
+        ori_sizes = [img.size for img in images]
+        images = [img.resize((1024, 1024)) for img in images]
+        image_embeddings = self.image_encoder(torch.stack([self.preprocess(image) for image in images]))
         language_embeddings = self.prompt_encoder(instruction, images)
         masks = self.mask_decoder(image_embeddings, language_embeddings)
-        mask_output = self.postprocess_masks(masks)
-        return mask_output
+        mask_output = torch.sigmoid(F.interpolate(
+                masks,
+                (ori_sizes[0][1], ori_sizes[0][0]),
+                mode="bilinear",
+                align_corners=False,
+        )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)
+        return np.sum(mask_output > boxes_threshold) / mask_output.size
+
+        
+
+
+    def get_bounding_box(self, images, instruction, boxes_threshold = 0.6):
+        ori_sizes = [img.size for img in images]
+        images = [img.resize((1024, 1024)) for img in images]
+        image_embeddings = self.image_encoder(torch.stack([self.preprocess(image) for image in images]))
+        language_embeddings = self.prompt_encoder(instruction, images)
+        masks = self.mask_decoder(image_embeddings, language_embeddings)
+        mask_output = torch.sigmoid(F.interpolate(
+                masks,
+                (ori_sizes[0][1], ori_sizes[0][0]),
+                mode="bilinear",
+                align_corners=False,
+        )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)
+        try:
+            y_indices, x_indices = np.where(mask_output > boxes_threshold)
+            x_min, x_max = x_indices.min().item(), x_indices.max().item()
+            y_min, y_max = y_indices.min().item(), y_indices.max().item()
+        except:
+            (0, 0, 0, 0)
+        return (x_min, y_min, x_max, y_max)
+
 
     def forward(
         self,
         images, # List[PIL.Image]
         gt_mask, # B H W
-        instruction, # List(str)
-        data_label
+        instruction, # List(str),
+        loss_weight = 1.0,
+        **kwarges
     ):
         image_embeddings = self.image_encoder(torch.stack([self.preprocess(image) for image in images]))
         language_embeddings = self.prompt_encoder(instruction, images)
         masks = self.mask_decoder(image_embeddings, language_embeddings)
         mask_output = self.postprocess_masks(masks)[:, 0, :, :]
-        loss_weight = 0.2 + 0.8 * data_label.to(mask_output.device, mask_output.dtype)
+        
         generator_ce_loss = sigmoid_ce_loss(mask_output, gt_mask.to(mask_output.device, mask_output.dtype)) 
         generator_dice_loss = dice_loss(mask_output, gt_mask.to(mask_output.device, mask_output.dtype))
-
         return {
-            'loss': torch.mean((generator_ce_loss + generator_dice_loss) * loss_weight),
+            'loss': torch.mean((generator_ce_loss + generator_dice_loss)),
             'generator_ce_loss': torch.mean(generator_ce_loss).item(),
             'generator_dice_loss': torch.mean(generator_dice_loss).item()
         }
@@ -159,11 +185,11 @@ class IVM(nn.Module):
             is given by original_size.
         """
         masks = F.interpolate(
-            masks,
+            masks.to(torch.float32),
             (self.image_encoder.img_size, self.image_encoder.img_size),
             mode="bilinear",
             align_corners=False,
-        )
+        ).to(self.pixel_mean.dtype)
         return masks
 
     def preprocess(self, x: Image) -> torch.Tensor:
@@ -172,3 +198,18 @@ class IVM(nn.Module):
         x = TF.to_tensor(x).to(self.pixel_mean.device, self.pixel_mean.dtype)
         x = (x - self.pixel_mean) / self.pixel_std
         return x
+
+
+    def generate(self, images, instruction):
+        image_embeddings = self.image_encoder(self.preprocess(images).unsqueeze(0))
+        language_embeddings = self.prompt_encoder([instruction], [images])
+        masks = self.mask_decoder(image_embeddings, language_embeddings)
+        mask_output = self.postprocess_masks(masks)
+        return mask_output
+    
+    def generate_batch(self, images, instruction):
+        image_embeddings = self.image_encoder(torch.stack([self.preprocess(img) for img in images], dim = 0))
+        language_embeddings = self.prompt_encoder(instruction, images)
+        masks = self.mask_decoder(image_embeddings, language_embeddings)
+        mask_output = self.postprocess_masks(masks)
+        return mask_output

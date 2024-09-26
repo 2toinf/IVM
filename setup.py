@@ -10,8 +10,8 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name='FamDeploy',
-    py_modules=["deploy"],
+    name='IVMDeploy',
+    py_modules=["IVM"],
     version='0.0.0',
     packages=find_packages(),
     description='',
@@ -23,10 +23,10 @@ setup(
         'timm',
         'mmengine',
         'tqdm',
+        'peft',
         'numpy',
         'transformers>=4.40.0',
         'gdown',
-        'opencv-python',
-        'flash-attn'
+        'opencv-python'
     ]
 )
