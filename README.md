@@ -1,10 +1,10 @@
 # Instruction-Guided Visual Masking
 
-[[paper]](https://arxiv.org/abs/2405.19783) [[project page]](https://2toinf.github.io/IVM/) [[Dataset]](https://huggingface.co/datasets/2toINF/IVM-Mix-1M/tree/main)
+[[📚paper]](https://arxiv.org/abs/2405.19783) [[project page]](https://2toinf.github.io/IVM/) [[🤗Dataset]](https://huggingface.co/datasets/2toINF/IVM-Mix-1M/tree/main)
+[[🤗model]](https://huggingface.co/2toINF/IVM/tree/main)
+### 🔥News [2024.09.26] IVM has been accepted by NeurIPS 2024
 
-### 🔥[2024.09.26] IVM has been accepted by NeurIPS 2024
-
-### 🔥 IVM has been selected as outstanding paper at MFM-EAI workshop @ICML2024
+### 🔥News [2024.07.21] IVM has been selected as outstanding paper at MFM-EAI workshop @ICML2024
 
 ## Introduction
 
@@ -74,11 +74,16 @@ result content:
 
 ```
 
+For more intresting cases, please refer to [demo.ipynb](demo.ipynb)
+
+
 ## Model Zoo
 
-| Models    |  Params<br />(M) | Iters | Pretrain ckpt                                                                              |
-| --------- |  --------------- | ----- | ------------------------------------------------------------------------------------------ |
-|  |  64M     | 1M |  |
+| Models   |basemodel |  Params<br />(M) | Iters | ckpt                                                                              |
+| --------- | --------- | --------------- | ----- | ------------------------------------------------------------------------------------------ |
+|  IVM-V1.0  | LLava-1.5-7B + SAM-H  |  64M     | 1M |  [HF-link](https://huggingface.co/2toINF/IVM/tree/main)
+
+We welcome everyone to further explore more IVM training methods and further scale it up!.
 
 
 ## Evaluation
