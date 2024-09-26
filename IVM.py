@@ -11,6 +11,7 @@ import accelerate
 import torch.nn as nn
 from typing import Type, Tuple, List
 
+
 def _download(url: str, name: str,root: str):
     os.makedirs(root, exist_ok=True)
 
@@ -23,102 +24,57 @@ def _download(url: str, name: str,root: str):
     return download_target
 
 def load(ckpt_path, low_gpu_memory = False):
-
     url = "https://drive.google.com/uc?export=download&id=1OyVci6rAwnb2sJPxhObgK7AvlLYDLLHw"
-    model_path = _download(url, "sam_vit_h_4b8939.pth", os.path.expanduser(f"~/.cache/IVM/Sam"))
-    model = DeployModel_IVM(
-        ckpt_path = ckpt_path,
-        sam_ckpt=model_path,
-        offload_languageencoder=low_gpu_memory
-    )
-    return model
+    sam_ckpt = _download(url, "sam_vit_h_4b8939.pth", os.path.expanduser(f"~/.cache/IVM/Sam"))
+    ckpt = torch.load(ckpt_path, map_location="cpu")
+    model = IVM(sam_model=sam_ckpt)
+    model.load_state_dict(ckpt, strict=False)
+    if low_gpu_memory: return accelerate.cpu_offload(model, "cuda")
+    else: return model.cuda()
 
 
-class DeployModel_IVM(nn.Module):
-    def __init__(self,
-            ckpt_path,
-            sam_ckpt,
-            offload_languageencoder = True
-        ):
-        super().__init__()
-        self.model = IVM(
-            sam_model=sam_ckpt
-        )
-        ckpt = torch.load(ckpt_path, map_location="cpu")
-        print(ckpt.keys())
-        print(self.model.load_state_dict(ckpt, strict=False))
-        self.model = self.model.half()
-        if offload_languageencoder:
-            self.model.prompt_encoder = accelerate.cpu_offload(self.model.prompt_encoder , 'cuda')
-        else:
-            self.model.prompt_encoder = self.model.prompt_encoder.cuda()
-        self.model.image_encoder = self.model.image_encoder.cuda()
-        self.model.pixel_mean = self.model.pixel_mean.cuda()
-        self.model.pixel_std = self.model.pixel_std.cuda()
-        self.model.mask_decoder = self.model.mask_decoder.cuda()
+def auto_postprocess(mask, dilate_kernel_rate = 0.05):
+    # TODO: Need to be adjusted according to different datasets 
+    dilate_kernel_size = int(mask.shape[0] * dilate_kernel_rate) * 2 + 1
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
+    mask = cv2.dilate(mask, kernel,iterations=1).astype(np.float32)
+    mask = cv2.GaussianBlur(mask, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
+    return mask
 
-    @torch.no_grad()
-    def forward_batch(
-        self, 
-        image, # list of PIL.Image
-        instruction: List[str], # list of instruction
-        blur_kernel_size = 201,
-        range_threshold = 0.5,
-        boxes_threshold = 0.5,
-        dilate_kernel_rate = 0.05,
-        min_reserved_ratio = 0.2,
-        fill_color=(255, 255, 255)
-    ):
-        ori_sizes = [img.size for img in image]
-        ori_images = [np.asarray(img).astype(np.float32) for img in image]
-        masks = self.model.generate_batch([img.resize((1024, 1024)) for img in image], instruction)
+@torch.no_grad()
+def forward_batch(
+    model, 
+    image, # list of PIL.Image
+    instruction: List[str], # list of instruction
+    threshold: float = 0.1, # threshold for pixel reserve/drop
+    do_crop = False,
+    overlay_color = (255,255,255)
+):
+    ori_sizes = [img.size for img in image]
+    ori_images = [np.asarray(img).astype(np.float32) for img in image]
+    masks = model.generate_batch([img.resize((1024, 1024)) for img in image], instruction)
 
-        soft = []
-        blur_image = []
-        highlight_image = []
-        cropped_blur_img = []
-        cropped_highlight_img = []
-        rgba = []
-        for mask, ori_image, ori_size in zip(masks, ori_images, ori_sizes):
-            mask = torch.sigmoid(F.interpolate(
-                mask.unsqueeze(0),
-                (ori_size[1], ori_size[0]),
-                mode="bilinear",
-                align_corners=False,
-            )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
-            dilate_kernel_size = int(ori_size[0] * dilate_kernel_rate) * 2 + 1
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(dilate_kernel_size,dilate_kernel_size)) #ksize=7x7,
-            mask = cv2.dilate(mask,kernel,iterations=1).astype(np.float32)
-            mask = cv2.GaussianBlur(mask, (dilate_kernel_size, dilate_kernel_size), 0)[:,:,np.newaxis]
-            if mask.max() - mask.min() > range_threshold:
-                mask = (mask - mask.min()) / (mask.max() - mask.min()) * (1 - min_reserved_ratio)
-            else:
-                mask = np.ones_like(mask) * (1 - min_reserved_ratio)
-            
-            if len(ori_image.shape) < 3:
-                ori_image = ori_image[:,:,np.newaxis].repeat(3,-1)
-            soft.append(mask)
-            rgba.append(np.concatenate((ori_image, mask * 255), axis=-1))
-            blur_image.append(mask * ori_image + (1-mask) * cv2.GaussianBlur(ori_image, (blur_kernel_size, blur_kernel_size), 0)) 
-            highlight_image.append(ori_image * (mask + min_reserved_ratio) + torch.tensor(fill_color, dtype=torch.uint8).repeat(ori_size[1], ori_size[0], 1).numpy() * (1 - min_reserved_ratio - mask))
-            
-            
+    result = []
+    for mask, ori_image, ori_size in zip(masks, ori_images, ori_sizes):
+        mask = torch.sigmoid(F.interpolate(
+            mask.unsqueeze(0),
+            (ori_size[1], ori_size[0]),
+            mode="bilinear",
+            align_corners=False,
+        )[0, 0, :, :]).detach().cpu().numpy().astype(np.float32)[:,:,np.newaxis]
+        if threshold > mask.max(): mask += threshold # fail to find the target, reserve the full image
+        mask = auto_postprocess((mask > threshold).astype(np.float32))
+
+        if len(ori_image.shape) < 3: ori_image = ori_image[:,:,np.newaxis].repeat(3,-1)
+        
+        processed_image = ori_image * mask + torch.tensor(overlay_color, dtype=torch.uint8).repeat(ori_size[1], ori_size[0], 1).numpy() * (1 - mask)
+        if do_crop:
             try:
-                y_indices, x_indices = np.where(mask[:,:,0] > boxes_threshold)
+                y_indices, x_indices = np.where(mask[:,:,0] > 0)
                 x_min, x_max = x_indices.min(), x_indices.max()
                 y_min, y_max = y_indices.min(), y_indices.max()
-                cropped_blur_img.append(blur_image[-1][y_min:y_max+1, x_min:x_max+1])
-                cropped_highlight_img.append(highlight_image[-1][y_min:y_max+1, x_min:x_max+1])
+                processed_image = processed_image[y_min:y_max+1, x_min:x_max+1]
             except:
-                cropped_blur_img.append(blur_image[-1])
-                cropped_highlight_img.append(highlight_image[-1])
-        return {
-            'soft': soft,
-            'bbox': (x_min, y_min, x_max, y_max), 
-            'blur_image': blur_image,
-            'highlight_image': highlight_image,
-            'cropped_blur_img': cropped_blur_img,
-            'cropped_highlight_img': cropped_highlight_img,
-            'rgba_image': rgba
-        }
-
+                print("Warning, unable to crop a sample, reserve whole image")
+        result.append(processed_image)
+    return result

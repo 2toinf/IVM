@@ -77,7 +77,7 @@ class IVM(nn.Module):
             window_size=14,
             out_chans=256,
         )
-        ckpt = torch.load(sam_model, map_location="cpu")
+        ckpt = torch.load(sam_model, map_location="cpu", weights_only= True)
         backbone_ckpt = {}
         for key, value in ckpt.items():
             if 'image_encoder.' in key:
