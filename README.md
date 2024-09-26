@@ -51,27 +51,15 @@ pip install -e .
 ### Usage
 
 ```python
-from IVM import load
-from PIL import Image
-
+from IVM import load, forward_batch
+ckpt_path = "IVM-V1.0.bin" # your model path here
 model = load(ckpt_path, low_gpu_memory = False) # Set `low_gpu_memory=True` if you don't have enough GPU Memory
-
-image = Image.open("image/demo/robot.jpg")
-instruction = "pick up the red cup"
-
-result = model.forward_batch([image], [instruction])
-'''
-result content:
-	    'soft': heatmap
-        'bbox': crop bbox
-        'blur_image': rbg
-        'highlight_image': rbg
-        'cropped_blur_img': rgb
-        'cropped_highlight_img': rgb
-        'alpha_image': rgba
-'''
-
-
+image = Image.open("image/demo/robot.jpg") # your image path
+instruction = "pick up the red cup and place it on the green pan" 
+result = forward_batch(model, [image], [instruction], threshold = 0.99)
+from matplotlib import pyplot as plt
+import numpy as np
+plt.imshow((result[0]).astype(np.uint8))
 ```
 
 For more intresting cases, please refer to [demo.ipynb](demo.ipynb)
