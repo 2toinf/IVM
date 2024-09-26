@@ -27,7 +27,7 @@ def load(ckpt_path, low_gpu_memory = False):
     url = "https://drive.google.com/uc?export=download&id=1OyVci6rAwnb2sJPxhObgK7AvlLYDLLHw"
     sam_ckpt = _download(url, "sam_vit_h_4b8939.pth", os.path.expanduser(f"~/.cache/IVM/Sam"))
     ckpt = torch.load(ckpt_path, map_location="cpu")
-    model = IVM(sam_model=sam_ckpt)
+    model = IVM(sam_model=sam_ckpt).eval()
     model.load_state_dict(ckpt, strict=False)
     if low_gpu_memory: return accelerate.cpu_offload(model, "cuda")
     else: return model.cuda()
