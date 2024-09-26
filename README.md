@@ -126,7 +126,7 @@ We provide a sample [code](IVM_1M_Mix/datareader.py) for reading data as a refer
 
 ## Acknowledgement
 
-This work is built upon the [LLaVA](https://github.com/haotian-liu/LLaVA) and [SAM](https://github.com/facebookresearch/segment-anything). And we borrow ideas from [LISA](https://github.com/dvlab-research/LISA)
+This work is built upon the [LLaVA](https://github.com/haotian-liu/LLaVA) and [SAM](https://github.com/facebookresearch/segment-anything) and [LISA](https://github.com/dvlab-research/LISA).
 
 ## Citation
 
