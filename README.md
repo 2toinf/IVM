@@ -131,13 +131,11 @@ This work is built upon the [LLaVA](https://github.com/haotian-liu/LLaVA) and [S
 ## Citation
 
 ```
-@misc{zheng2024instructionguided,
-            title={Instruction-Guided Visual Masking}, 
-            author={Jinliang Zheng and Jianxiong Li and Sijie Cheng and Yinan Zheng and Jiaming Li and Jihao Liu and Yu Liu and Jingjing Liu and Xianyuan Zhan},
-            year={2024},
-            eprint={2405.19783},
-            archivePrefix={arXiv},
-            primaryClass={cs.CV}
-        }
+@article{zheng2024instruction,
+  title={Instruction-Guided Visual Masking},
+  author={Zheng, Jinliang and Li, Jianxiong and Cheng, Sijie and Zheng, Yinan and Li, Jiaming and Liu, Jihao and Liu, Yu and Liu, Jingjing and Zhan, Xianyuan},
+  journal={arXiv preprint arXiv:2405.19783},
+  year={2024}
+}
   
 ```
